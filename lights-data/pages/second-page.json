@@ -1,0 +1,6 @@
+{
+    "page_title": "<p>\r\n    A second page\r\n<\/p>",
+    "slug": "second-page",
+    "page_content": "<p>\r\n    This is some content on a second page\r\n<\/p>",
+    "page_widget_1": "<p>\r\n    This is text that is only shown on A second page, not on <a href=\"index\">the front page<\/a> or on <a href=\"third-page\">A third page<\/a>.\r\n<\/p>"
+}

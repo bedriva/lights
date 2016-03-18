@@ -1,0 +1,8 @@
+RewriteEngine On
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+RewriteRule ^lights-data /403-forbidden [NC,L,R]
+RewriteRule ^([A-Za-z0-9-]+)$ content.php?slug=$1 [NC,L]
+RewriteRule ^$ content.php?slug=index [NC,L]

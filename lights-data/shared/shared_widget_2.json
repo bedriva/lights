@@ -1,0 +1,3 @@
+{
+    "shared_widget_2": "<p>\r\n    <b>Shared widget #2<\/b><br>There is no limit on how many shared widgets you can have\r\n<\/p>\r\n<table>\r\n    <thead>\r\n        <tr>\r\n            <th>\r\n                Head A\r\n            <\/th>\r\n            <th>\r\n                Head B\r\n            <\/th>\r\n        <\/tr>\r\n    <\/thead>\r\n    <tbody>\r\n        <tr>\r\n            <td>\r\n                Content 1A\r\n            <\/td>\r\n            <td>\r\n                Content 1B\r\n            <\/td>\r\n        <\/tr>\r\n        <tr>\r\n            <td>\r\n                Content 2A\r\n            <\/td>\r\n            <td>\r\n                Content 2B\r\n            <\/td>\r\n        <\/tr>\r\n    <\/tbody>\r\n<\/table>"
+}

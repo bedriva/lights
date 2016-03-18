@@ -1,0 +1,9 @@
+{
+    "main_title": "Start page",
+    "slug": "index",
+    "main_content": "<p>Test<\/p>",
+    "page_title": "<p>\r\n    Welcome to the lights\r\n<\/p>",
+    "page_content": "<p>\r\n    Might this be your new CMS?\r\n<\/p>",
+    "page_widget_1": "<p>\r\n    This is info that is only shown on the start page\r\n<\/p>",
+    "page_widget_2": "<p>\r\n    This is also info that is only shown on the start page\r\n<\/p>"
+}
