@@ -16,7 +16,7 @@ var LIGHTS = {
   urlServer: 'lights-server/',
 
   pageData: {
-    slug: _LIGHTS.slug
+    current_slug: _LIGHTS.slug
   },
 
   request: function(type, url, data, success, fail, editor) {
@@ -42,13 +42,18 @@ var LIGHTS = {
 
   save: function(content, editor, redirect) {
     if (!redirect) {
-      content.append('slug', this.pageData.slug);
+      content.append('current_slug', this.pageData.current_slug);
     }
 
-    this.request('POST', this.urlServer + 'save-content.php', content, function() {
+    this.request('POST', this.urlServer + 'save-content.php', content, function(data) {
       new ContentTools.FlashUI('ok');
       if (redirect) {
         window.location.href = redirect;
+        return;
+      }
+      if (data.redirect) {
+        window.location.href = data.redirect;
+        return;
       }
     }, function() {
       new ContentTools.FlashUI('no');

@@ -23,6 +23,28 @@ body .ct-widget.ct-ignition {
   display:none;
 }
 
+[data-name="slug"] {
+  position:fixed;
+  top:25px;
+  right:150px;
+  display:inline-block;
+  padding:10px 20px;
+  background-color:rgba(255, 255, 255, .9);
+  color:#333;
+  letter-spacing:0.04em;
+  cursor:pointer;
+}
+[data-name="slug"] > * {
+  display:none;
+}
+[data-name="slug"] > .ce-element {
+  display:block;
+}
+[data-name="slug"] > p {
+  margin-top:0;
+  margin-bottom:0;
+}
+
 .create-page-button {
   position:fixed;
   bottom:10px;

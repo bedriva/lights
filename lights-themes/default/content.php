@@ -2,6 +2,7 @@
 
 <div>
   <article>
+    <?php echo get_region_from_page('slug', $page, 'div'); ?>
     <?php echo get_region_from_page('page_title', $page, 'h1'); ?>
     <?php echo get_region_from_page('page_content', $page); ?>
   </article>

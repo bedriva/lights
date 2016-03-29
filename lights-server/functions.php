@@ -12,10 +12,15 @@ function json_decode_file($file) {
   return json_decode($content);
 }
 
-function json_response($ok, $message) {
+function json_response($ok, $message, $array = array()) {
   $obj = new stdClass;
   $obj->ok = $ok;
   $obj->message = $message;
+
+  foreach ($array as $key => $val) {
+    $obj->$key = $val;
+  }
+
   return json_encode($obj);
 }
 
@@ -24,6 +29,10 @@ function json_response($ok, $message) {
 function get_page_by_slug($slug) {
   $file = BASEPATH_DATA . '/pages/' . $slug . '.json';
   return json_decode_file($file);
+}
+
+function strip_and_trim($content) {
+  return trim(strip_tags(trim($content)));
 }
 
 function get_pages() {
@@ -35,7 +44,7 @@ function get_pages() {
     if ($page !== '.' && $page !== '..') {
       $file = BASEPATH_DATA . '/pages/' . $page;
       $page = json_decode_file($file);
-      $page->stripped_title = trim(strip_tags(trim($page->page_title)));
+      $page->stripped_title = strip_and_trim($page->page_title);
       if (!empty($page->stripped_title)) {
         $newPages[] = $page;
       }
@@ -48,7 +57,11 @@ function get_pages() {
 
 function get_region_from_page($region, $page, $tag = 'div') {
   $content = '<' . $tag . ' data-editable data-name="' . $region . '">';
-  $content.= $page->$region;
+  if ($region === 'slug') {
+    $content.= '<p>/' . $page->$region . '</p>';
+  } else {
+    $content.= $page->$region;
+  }
   $content.= '</' . $tag . '>';
 
   return $content;
