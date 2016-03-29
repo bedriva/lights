@@ -22,3 +22,38 @@ body .ct-widget.ct-ignition {
 [data-shared] .ce-element .ce-element:after {
   display:none;
 }
+
+.create-page-button {
+  position:fixed;
+  bottom:10px;
+  right:10px;
+  display:inline-block;
+  padding:10px 20px;
+  background-color:rgba(255, 255, 255, .9);
+  color:#333;
+  letter-spacing:0.04em;
+  cursor:pointer;
+}
+
+.logout-button {
+  position:fixed;
+  bottom:10px;
+  left:10px;
+  display:inline-block;
+  padding:10px 20px;
+  background-color:rgba(255, 255, 255, .9);
+  color:#333;
+  letter-spacing:0.04em;
+  cursor:pointer;
+}
+
+input {
+  margin-bottom:6px;
+  padding:4px 8px;
+}
+
+[data-loggedin="0"] .ct-app,
+[data-loggedin="0"] .create-page-button,
+[data-loggedin="0"] .logout-button {
+  display:none;
+}

@@ -1,4 +1,5 @@
 <?php
+session_start();
 
 define('BASEPATH', realpath(realpath(dirname(__FILE__)) . '/../'));
 define('BASEPATH_DATA', realpath(BASEPATH . '/lights-data/'));
@@ -10,6 +11,15 @@ function json_decode_file($file) {
   $content = file_get_contents($file);
   return json_decode($content);
 }
+
+function json_response($ok, $message) {
+  $obj = new stdClass;
+  $obj->ok = $ok;
+  $obj->message = $message;
+  return json_encode($obj);
+}
+
+/* Page functions */
 
 function get_page_by_slug($slug) {
   $file = BASEPATH_DATA . '/pages/' . $slug . '.json';
@@ -62,4 +72,38 @@ function get_shared_region($region, $tag = 'div') {
   $content.= '</' . $tag . '>';
 
   return $content;
+}
+
+/* User functions */
+
+function is_loggedin() {
+  return $_SESSION['loggedin'];
+}
+
+function do_login($username) {
+  $_SESSION['loggedin_as_user'] = $username;
+  $_SESSION['loggedin'] = !!$username;
+
+  return is_loggedin();
+}
+
+function logout() {
+  do_login(null);
+
+  return is_loggedin();
+}
+
+function check_and_do_login($username, $password) {
+  $user = json_decode_file(dirname(__FILE__) . '/../lights-data/users/' . $username . '.json');
+
+  if (empty($username)) {
+    return false;
+  }
+
+  if ($user && $user->username === $username && $user->password === $password) {
+    return do_login($username);
+  } else {
+    return false;
+  }
+
 }

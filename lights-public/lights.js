@@ -28,7 +28,7 @@ var LIGHTS = {
           editor.busy(false);
         }
         if (ev.target.status == '200') {
-          success();
+          success(JSON.parse(ev.target.responseText));
         } else {
           fail();
         }
@@ -95,14 +95,45 @@ var LIGHTS = {
       }
     });
 
-    link.style = 'position:fixed;bottom:10px;right:10px;display:inline-block;padding:10px 20px;background-color:rgba(255, 255, 255, .9);color:#333;letter-spacing:0.04em;cursor:pointer;';
+    link.className = 'create-page-button';
 
     this.toggleElement = link;
 
     document.body.appendChild(link);
+
+    var linkLogout = document.createElement('div');
+    linkLogout.innerHTML = 'Log out';
+    linkLogout.addEventListener("click", function() {
+      window.location.href = 'logout';
+    });
+
+    linkLogout.className = 'logout-button';
+
+    this.toggleElement = linkLogout;
+
+    document.body.appendChild(linkLogout);
+  },
+
+  is_loggedin: false,
+
+  check_loggedin: function() {
+    this.request('GET', this.urlServer + 'check-loggedin.php', null, function(content) {
+      LIGHTS.is_loggedin = !!content.ok;
+      LIGHTS.update_loggedin_status();
+    }, function() {}, null);
+  },
+
+  update_loggedin_status: function() {
+    if (this.is_loggedin) {
+      document.body.setAttribute('data-loggedin', '1');
+    } else {
+      document.body.setAttribute('data-loggedin', '0');
+    }
   }
 };
 
 document.addEventListener("DOMContentLoaded", function() {
+  LIGHTS.check_loggedin();
+  LIGHTS.update_loggedin_status();
   LIGHTS.show();
 });
