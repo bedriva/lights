@@ -13,14 +13,14 @@
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
 
-    <title>Lights by bedriva</title>
+    <title>lights by bedriva</title>
   </head>
 
   <body>
     <header>
       <div class="inner">
-        <h1>Lights</h1>
-        <h2>A really light weight CMS with actual WYSIWYG and file store.</h2>
+        <h1>lights</h1>
+        <h2>A really light weight CMS with actual WYSIWYG and file store</h2>
         <a href="https://github.com/bedriva/lights" class="button"><small>View project on</small> GitHub</a>
       </div>
     </header>
@@ -28,7 +28,55 @@
     <div id="content-wrapper">
       <div class="inner clearfix">
         <section id="main-content">
-          <p>A really light weight CMS with actual WYSIWYG and file store.</p>
+          <p>lights is a really light weight CMS with actual WYSIWYG and file store. The lights core should follow the following principles:</p>
+
+<ul>
+<li>What you see is really what you get. Content that you edit MUST look the same after you've saved it. No unpleasant surprises.</li>
+<li>All data must be stored in the file system. No database involved.</li>
+<li>It must be fast.</li>
+</ul>
+
+<p>These principles only applies to the lights core though, so plugins and custom development doesn't have to work like this.</p>
+
+<h2>
+<a id="why" class="anchor" href="#why" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Why?</h2>
+
+<p>Today's popular CMS systems have done a great job during the last 15 years. Publishing and editing websites are easier than ever before, but the users and developers are still not happy. The main complaints from authors concerns the content editing process, and many developers generally don't like the software design principles of existing systems.</p>
+
+<p>lights goal for the user is to help the content author to edit the site more easily. With true WYSIWYG editing, authors doesn't have to waste time in the edit/preview cycle.</p>
+
+<p>The goal for the developer is to be able to develop the functions that the client need instead of focusing on learning a huge CMS, which still needs a lot of plugins to be functional. When using a file store instead of a database we can version control and push content updates without messing with different versions of the database.</p>
+
+<h2>
+<a id="how-do-i-install" class="anchor" href="#how-do-i-install" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>How do I install?</h2>
+
+<ol>
+<li>Clone the project <code>git clone https://github.com/bedriva/lights.git</code>
+</li>
+<li>Modify the user credentials in <code>lights-data/users/admin.json</code>
+</li>
+<li>Browse the site through your favorite browser</li>
+</ol>
+
+<h2>
+<a id="content-structure" class="anchor" href="#content-structure" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Content structure</h2>
+
+<p>All site data is stored in files - not in a database.</p>
+
+<h2>
+<a id="whats-on-the-roadmap" class="anchor" href="#whats-on-the-roadmap" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>What's on the roadmap?</h2>
+
+<ul>
+<li>[x] User login</li>
+<li>[x] WYSIWYG editing</li>
+<li>[x] Shared widgets</li>
+<li>[ ] Version handling</li>
+<li>[ ] News/blog</li>
+<li>[ ] Select on which pages widgets should appear</li>
+<li>[ ] More attractive base theme</li>
+<li>[ ] Modular inline editing tool</li>
+<li>[ ] Passwordless login</li>
+</ul>
         </section>
 
         <aside id="sidebar">
