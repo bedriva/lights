@@ -1,0 +1,8 @@
+{
+    "page_title": "<p>\r\n    How to use\r\n<\/p>",
+    "slug": "how-to-use",
+    "page_content": "<h2>\r\n    Step 1: Clone the project git clone\r\n<\/h2>\r\n<pre>https:\/\/github.com\/bedriva\/lights.git\r\n<\/pre>\r\n<h2>\r\n    Step 2: Modify the user credentials\r\n<\/h2>\r\n<pre>lights-data\/users\/admin.json\r\n<\/pre>\r\n<h2>\r\n    Step 3: Browse\r\n<\/h2>\r\n<p>\r\n    Browse the site through your favorite browser\r\n<\/p>",
+    "page_widget_1": "",
+    "page_widget_2": "",
+    "order": "<p>\r\n    2\r\n<\/p>"
+}

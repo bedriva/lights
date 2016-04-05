@@ -23,26 +23,36 @@ body .ct-widget.ct-ignition {
   display:none;
 }
 
-[data-name="slug"] {
+[data-name="slug"],
+[data-name="order"] {
   position:fixed;
-  top:25px;
-  right:150px;
+  top:0;
+  right:220px;
   display:inline-block;
   padding:10px 20px;
-  background-color:rgba(255, 255, 255, .9);
   color:#333;
   letter-spacing:0.04em;
   cursor:pointer;
 }
-[data-name="slug"] > * {
+[data-name="order"] {
+  right:150px;
+}
+[data-name="slug"] > *,
+[data-name="order"] > * {
   display:none;
 }
-[data-name="slug"] > .ce-element {
+[data-name="slug"] > .ce-element,
+[data-name="order"] > .ce-element {
   display:block;
 }
-[data-name="slug"] > p {
+[data-name="slug"] > p,
+[data-name="order"] > p {
   margin-top:0;
   margin-bottom:0;
+}
+
+.ct-widget.ct-ignition {
+  top:5px;
 }
 
 .create-page-button {
@@ -76,6 +86,12 @@ input {
 
 [data-loggedin="0"] .ct-app,
 [data-loggedin="0"] .create-page-button,
-[data-loggedin="0"] .logout-button {
+[data-loggedin="0"] .logout-button,
+[data-loggedin="0"] [data-editable][data-name="slug"],
+[data-loggedin="0"] [data-editable][data-name="order"] {
   display:none;
+}
+[data-loggedin="1"] [data-editable][data-name="slug"],
+[data-loggedin="1"] [data-editable][data-name="order"] {
+  z-index:1000000;
 }

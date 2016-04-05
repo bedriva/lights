@@ -13,7 +13,7 @@ var LIGHTS = {
     alert(text);
   },
 
-  urlServer: 'lights-server/',
+  urlServer: _LIGHTS.baseurl + 'lights-server/',
 
   pageData: {
     current_slug: _LIGHTS.slug
@@ -48,11 +48,11 @@ var LIGHTS = {
     this.request('POST', this.urlServer + 'save-content.php', content, function(data) {
       new ContentTools.FlashUI('ok');
       if (redirect) {
-        window.location.href = redirect;
+        window.location.href = _LIGHTS.baseurl + redirect;
         return;
       }
       if (data.redirect) {
-        window.location.href = data.redirect;
+        window.location.href = _LIGHTS.baseurl + data.redirect;
         return;
       }
     }, function() {
@@ -63,18 +63,18 @@ var LIGHTS = {
   show: function() {
     var s1 = document.createElement("script");
     s1.type = "text/javascript";
-    s1.src = "lights-public/contenttools/content-tools.min.js";
+    s1.src = _LIGHTS.baseurl + "lights-public/contenttools/content-tools.min.js";
     var s2 = document.createElement("script");
     s2.type = "text/javascript";
-    s2.src = "lights-public/editor-contenttools.js";
+    s2.src = _LIGHTS.baseurl + "lights-public/editor-contenttools.js";
     var c1 = document.createElement("link");
     c1.rel = "stylesheet";
     c1.type = "text/css";
-    c1.href = "lights-public/contenttools/content-tools.min.css";
+    c1.href = _LIGHTS.baseurl + "lights-public/contenttools/content-tools.min.css";
     var c2 = document.createElement("link");
     c2.rel = "stylesheet";
     c2.type = "text/css";
-    c2.href = "lights-public/editor-contenttools.css";
+    c2.href = _LIGHTS.baseurl + "lights-public/editor-contenttools.css";
 
     document.body.appendChild(s1);
     document.body.appendChild(s2);

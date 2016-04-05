@@ -29,6 +29,8 @@ All site data is stored in files - not in a database.
 - [ ] Version handling
 - [ ] News/blog
 - [ ] Select on which pages widgets should appear
-- [ ] More attractive base theme
+- [x] More attractive base theme
 - [ ] Modular inline editing tool
 - [ ] Passwordless login
+- [x] Page ordering
+- [x] Page paths (containing `/`)

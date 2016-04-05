@@ -1,11 +1,16 @@
 <?php
 require_once 'functions.php';
 
-file_put_contents('test', 'test');
-
 if (is_loggedin()) {
 
-  $file = dirname(__FILE__) . '/../lights-data/pages/' . $_POST['current_slug'] . '.json';
+  $current_filename = slugify($_POST['current_slug']);
+  $filename = slugify($_POST['slug']);
+
+  if (empty($filename)) {
+    $filename = $current_filename;
+  }
+
+  $file = dirname(__FILE__) . '/../lights-data/pages/' . $current_filename . '.json';
   $content = file_get_contents($file);
   $page = json_decode($content);
 
@@ -19,7 +24,11 @@ if (is_loggedin()) {
       file_put_contents($_file, $_content);
 
     } else if ($prop === 'slug') {
-      $page->$prop = substr(strip_and_trim($val), 1);
+      if (substr(strip_and_trim($val), 0, 1) === '/') {
+        $page->$prop = substr(strip_and_trim($val), 1);
+      } else {
+        $page->$prop = strip_and_trim($val);
+      }
 
     } else if ($prop === 'current_slug') {
       // do nothing
@@ -36,9 +45,9 @@ if (is_loggedin()) {
 
   file_put_contents($file, $content);
 
-  if ($_POST['current_slug'] !== $page->slug) {
+  if ($current_filename !== $filename) {
     $original = $file;
-    $new = (dirname(__FILE__) . '/../lights-data/pages/' . $page->slug . '.json');
+    $new = (dirname(__FILE__) . '/../lights-data/pages/' . $filename . '.json');
 
     if (!file_exists($new)) {
       copy($original, $new);
