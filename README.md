@@ -30,7 +30,8 @@ All site data is stored in files - not in a database.
 - [ ] News/blog
 - [ ] Select on which pages widgets should appear
 - [x] More attractive base theme
-- [ ] Modular inline editing tool
+- [x] Modular inline editing tool (contenttools / ckeditor)
+- [ ] Wordpress polyfill
 - [ ] Passwordless login
 - [x] Page ordering
 - [x] Page paths (containing `/`)

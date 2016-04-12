@@ -29,8 +29,7 @@
   <!-- lights
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
   <link rel="stylesheet" href="<?php echo get_base_url($page->slug); ?>lights-themes/<?php echo THEME; ?>/theme.css" />
-  <script>_LIGHTS={slug:"<?php echo $_GET['slug']; ?>", baseurl: "<?php echo get_base_url($page->slug); ?>"};</script>
-  <script src="<?php echo get_base_url($page->slug); ?>lights-public/lights.js"></script>
+  <?php echo theme_head($page); ?>
 
 </head>
 <body class="slug-<?php echo $_GET['slug']; ?>">

@@ -9,6 +9,9 @@ var LIGHTS = {
 
   toggleElement: null,
 
+  editorIds: [],
+  editingState: null,
+
   notify: function(text) {
     alert(text);
   },
@@ -46,7 +49,9 @@ var LIGHTS = {
     }
 
     this.request('POST', this.urlServer + 'save-content.php', content, function(data) {
-      new ContentTools.FlashUI('ok');
+      if (EDITOR === 'contenttools') {
+        new ContentTools.FlashUI('ok');
+      }
       if (redirect) {
         window.location.href = _LIGHTS.baseurl + redirect;
         return;
@@ -56,31 +61,65 @@ var LIGHTS = {
         return;
       }
     }, function() {
-      new ContentTools.FlashUI('no');
+      if (EDITOR === 'contenttools') {
+        new ContentTools.FlashUI('no');
+      }
     }, editor);
   },
 
   show: function() {
-    var s1 = document.createElement("script");
-    s1.type = "text/javascript";
-    s1.src = _LIGHTS.baseurl + "lights-public/contenttools/content-tools.min.js";
-    var s2 = document.createElement("script");
-    s2.type = "text/javascript";
-    s2.src = _LIGHTS.baseurl + "lights-public/editor-contenttools.js";
-    var c1 = document.createElement("link");
-    c1.rel = "stylesheet";
-    c1.type = "text/css";
-    c1.href = _LIGHTS.baseurl + "lights-public/contenttools/content-tools.min.css";
-    var c2 = document.createElement("link");
-    c2.rel = "stylesheet";
-    c2.type = "text/css";
-    c2.href = _LIGHTS.baseurl + "lights-public/editor-contenttools.css";
 
-    document.body.appendChild(s1);
-    document.body.appendChild(s2);
-    document.body.appendChild(c1);
-    document.body.appendChild(c2);
+    var s1, s2, c1, c2;
 
+    if (EDITOR === 'contenttools') {
+
+      // Embed scripts
+      s1 = document.createElement("script");
+      s1.type = "text/javascript";
+      s1.src = _LIGHTS.baseurl + "lights-public/contenttools/content-tools.min.js";
+
+      s2 = document.createElement("script");
+      s2.type = "text/javascript";
+      s2.src = _LIGHTS.baseurl + "lights-public/editor-contenttools.js";
+
+      c1 = document.createElement("link");
+      c1.rel = "stylesheet";
+      c1.type = "text/css";
+      c1.href = _LIGHTS.baseurl + "lights-public/contenttools/content-tools.min.css";
+
+      c2 = document.createElement("link");
+      c2.rel = "stylesheet";
+      c2.type = "text/css";
+      c2.href = _LIGHTS.baseurl + "lights-public/editor-contenttools.css";
+
+      document.body.appendChild(s1);
+      document.body.appendChild(s2);
+      document.body.appendChild(c1);
+      document.body.appendChild(c2);
+
+    }
+
+    if (EDITOR === 'ckeditor') {
+
+      // Embed scripts
+      s1 = document.createElement("script");
+      s1.type = "text/javascript";
+      s1.onload = function() {
+        CKEDITOR.disableAutoInline = true;
+      };
+      s1.src = _LIGHTS.baseurl + "lights-public/ckeditor/ckeditor.js";
+
+      c2 = document.createElement("link");
+      c2.rel = "stylesheet";
+      c2.type = "text/css";
+      c2.href = _LIGHTS.baseurl + "lights-public/editor-contenttools.css";
+
+      document.body.appendChild(s1);
+      document.body.appendChild(c2);
+
+    }
+
+    // New page
     var link = document.createElement('div');
     link.innerHTML = 'New page';
     link.addEventListener("click", function() {
@@ -102,10 +141,9 @@ var LIGHTS = {
 
     link.className = 'create-page-button';
 
-    this.toggleElement = link;
-
     document.body.appendChild(link);
 
+    // Logout
     var linkLogout = document.createElement('div');
     linkLogout.innerHTML = 'Log out';
     linkLogout.addEventListener("click", function() {
@@ -114,9 +152,95 @@ var LIGHTS = {
 
     linkLogout.className = 'logout-button';
 
-    this.toggleElement = linkLogout;
-
     document.body.appendChild(linkLogout);
+
+    // Cancel edit of current page
+    var linkCancel = document.createElement('div');
+    linkCancel.innerHTML = 'Cancel';
+    linkCancel.addEventListener("click", function() {
+      if (EDITOR === 'contenttools') {
+        var editor = ContentTools.EditorApp.get();
+        editor.stop(false);
+
+      }
+
+      if (EDITOR === 'ckeditor') {
+        LIGHTS.editorIds.forEach(function(id) {
+          document.getElementById(id).setAttribute('contenteditable', 'false');
+          CKEDITOR.instances[id].destroy();
+        });
+
+      }
+
+      linkEdit.innerHTML = 'Edit';
+      linkCancel.style = 'display:none;';
+      LIGHTS.editingState = null;
+    });
+
+    linkCancel.className = 'cancel-page-button';
+    linkCancel.style = 'display:none;';
+
+    document.body.appendChild(linkCancel);
+
+    // Edit current page
+    var linkEdit = document.createElement('div');
+    linkEdit.innerHTML = 'Edit';
+    linkEdit.addEventListener("click", function() {
+
+      if (EDITOR === 'contenttools') {
+        var editor = ContentTools.EditorApp.get();
+
+        if (editor.getState() === 'editing') {
+          editor.stop(true);
+
+        } else {
+          editor.start();
+
+        }
+
+      }
+
+      if (EDITOR === 'ckeditor') {
+
+        if (LIGHTS.editingState === 'editing') {
+          payload = new FormData();
+
+          LIGHTS.editorIds.forEach(function(id) {
+            payload.append(id, document.getElementById(id).innerHTML);
+            CKEDITOR.instances[id].destroy();
+            document.getElementById(id).setAttribute('contenteditable', 'false');
+          });
+
+          LIGHTS.save(payload, null);
+
+        } else {
+          LIGHTS.editorIds.forEach(function(id) {
+            document.getElementById(id).setAttribute('contenteditable', 'true');
+            CKEDITOR.inline( id );
+          });
+
+        }
+
+      }
+
+      if (LIGHTS.editingState === 'editing') {
+        linkEdit.innerHTML = 'Edit';
+        linkCancel.style = 'display:none;';
+        LIGHTS.editingState = null;
+
+      } else {
+        linkEdit.innerHTML = 'Save';
+        linkCancel.style = 'display:block;';
+        LIGHTS.editingState = 'editing';
+
+      }
+
+    });
+
+    linkEdit.className = 'edit-page-button';
+
+    document.body.appendChild(linkEdit);
+
   },
 
   is_loggedin: false,

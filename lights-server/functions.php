@@ -6,6 +6,9 @@ define('BASEPATH_DATA', realpath(BASEPATH . '/lights-data/'));
 define('BASEPATH_SERVER', realpath(BASEPATH . '/lights-server/'));
 define('BASEPATH_THEME', realpath(BASEPATH . '/lights-themes/'));
 define('THEME', 'default');
+define('EDITOR', 'ckeditor'); // 'ckeditor' || 'contenttools'
+
+$GLOBALS['EDITORIDS'] = array();
 
 function json_decode_file($file) {
   $content = file_get_contents($file);
@@ -89,7 +92,7 @@ function get_base_url($slug) {
 }
 
 function get_region_from_page($region, $page, $tag = 'div') {
-  $content = '<' . $tag . ' data-editable data-name="' . $region . '">';
+  $content = '<' . $tag . ' data-editable data-name="' . $region . '" contenteditable="false" id="' . $region . '">';
   if ($region === 'slug') {
     $content.= '<p>/' . $page->$region . '</p>';
   } else {
@@ -97,15 +100,13 @@ function get_region_from_page($region, $page, $tag = 'div') {
   }
   $content.= '</' . $tag . '>';
 
+  array_push($GLOBALS['EDITORIDS'], $region);
+
   return $content;
 }
 
 function get_region_from_shared($region, $page, $tag = 'div') {
-  $content = '<' . $tag . ' data-editable data-name="' . $region . '">';
-  $content.= $page->$region;
-  $content.= '</' . $tag . '>';
-
-  return $content;
+  return '';
 }
 
 function get_shared_region($region, $tag = 'div', $attrs = array()) {
@@ -120,7 +121,7 @@ function get_shared_region($region, $tag = 'div', $attrs = array()) {
     $page->$region = '<p>Empty region</p>';
   }
 
-  $content = '<' . $tag . ' data-editable data-name="' . $region . '" data-shared ';
+  $content = '<' . $tag . ' data-editable data-name="' . $region . '" data-shared contenteditable="false" id="' . $region . '" ';
 
   foreach ($attrs as $attr => $value) {
     $content.= ' ' . $attr . '="' . $value . '" ';
@@ -129,6 +130,8 @@ function get_shared_region($region, $tag = 'div', $attrs = array()) {
   $content.= ' >';
   $content.= $page->$region;
   $content.= '</' . $tag . '>';
+
+  array_push($GLOBALS['EDITORIDS'], $region);
 
   return $content;
 }
@@ -165,4 +168,12 @@ function check_and_do_login($username, $password) {
     return false;
   }
 
+}
+
+function theme_head($page) {
+  return '<script>_LIGHTS={slug:"' . $_GET['slug'] . '", baseurl: "' . get_base_url($page->slug) . '", editorIds: ' . json_encode($GLOBALS['EDITORIDS']) . '}; EDITOR=\'' . EDITOR . '\';</script> <script src="' . get_base_url($page->slug) . 'lights-public/lights.js"></script>';
+}
+
+function theme_foot() {
+  return '<script>LIGHTS.editorIds = ' . json_encode($GLOBALS['EDITORIDS']) . '</script>';
 }
