@@ -1609,6 +1609,10 @@
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   window.ContentEdit = {
+    ALIGNMENT_CLASS_NAMES: {
+      'left': 'align-left',
+      'right': 'align-right'
+    },
     DEFAULT_MAX_ELEMENT_WIDTH: 800,
     DEFAULT_MIN_ELEMENT_WIDTH: 80,
     DRAG_HOLD_DURATION: 500,
@@ -2081,6 +2085,14 @@
       this._tagName = tagName.toLowerCase();
       this._attributes = attributes ? attributes : {};
       this._domElement = null;
+      this._behaviours = {
+        drag: true,
+        drop: true,
+        merge: true,
+        remove: true,
+        resize: true,
+        spawn: true
+      };
     }
 
     Element.prototype.attributes = function() {
@@ -2157,6 +2169,13 @@
       }
     };
 
+    Element.prototype.can = function(behaviour, allowed) {
+      if (allowed === void 0) {
+        return this._behaviours[behaviour];
+      }
+      return this._behaviours[behaviour] = allowed;
+    };
+
     Element.prototype.createDraggingDOMElement = function() {
       var helper;
       if (!this.isMounted()) {
@@ -2170,7 +2189,7 @@
 
     Element.prototype.drag = function(x, y) {
       var root;
-      if (!this.isMounted()) {
+      if (!(this.isMounted() && this.can('drag'))) {
         return;
       }
       root = ContentEdit.Root.get();
@@ -2180,6 +2199,9 @@
 
     Element.prototype.drop = function(element, placement) {
       var root;
+      if (!this.can('drop')) {
+        return;
+      }
       root = ContentEdit.Root.get();
       if (element) {
         element._removeCSSClass('ce-element--drop');
@@ -2236,6 +2258,9 @@
     };
 
     Element.prototype.merge = function(element) {
+      if (!(this.can('merge') && this.can('remove'))) {
+        return false;
+      }
       if (this.constructor.mergers[element.type()]) {
         return this.constructor.mergers[element.type()](element, this);
       } else if (element.constructor.mergers[this.type()]) {
@@ -2453,10 +2478,14 @@
       if (root._dropTarget) {
         return;
       }
-      if (this.constructor.droppers[dragging.type()] || dragging.constructor.droppers[this.type()]) {
-        this._addCSSClass('ce-element--drop');
-        return root._dropTarget = this;
+      if (!this.can('drop')) {
+        return;
       }
+      if (!(this.constructor.droppers[dragging.type()] || dragging.constructor.droppers[this.type()])) {
+        return;
+      }
+      this._addCSSClass('ce-element--drop');
+      return root._dropTarget = this;
     };
 
     Element.prototype._removeDOMEventListeners = function() {};
@@ -2513,21 +2542,23 @@
     };
 
     Element._dropBoth = function(element, target, placement) {
-      var aClassNames, className, insertIndex, _i, _len, _ref;
+      var aClassNames, alignLeft, alignRight, className, insertIndex, _i, _len, _ref;
       element.parent().detach(element);
       insertIndex = target.parent().children.indexOf(target);
       if (placement[0] === 'below' && placement[1] === 'center') {
         insertIndex += 1;
       }
+      alignLeft = ContentEdit.ALIGNMENT_CLASS_NAMES['left'];
+      alignRight = ContentEdit.ALIGNMENT_CLASS_NAMES['right'];
       if (element.a) {
-        element._removeCSSClass('align-left');
-        element._removeCSSClass('align-right');
+        element._removeCSSClass(alignLeft);
+        element._removeCSSClass(alignRight);
         if (element.a['class']) {
           aClassNames = [];
           _ref = element.a['class'].split(' ');
           for (_i = 0, _len = _ref.length; _i < _len; _i++) {
             className = _ref[_i];
-            if (className === 'align-left' || className === 'align-right') {
+            if (className === alignLeft || className === alignRight) {
               continue;
             }
             aClassNames.push(className);
@@ -2539,31 +2570,31 @@
           }
         }
       } else {
-        element.removeCSSClass('align-left');
-        element.removeCSSClass('align-right');
+        element.removeCSSClass(alignLeft);
+        element.removeCSSClass(alignRight);
       }
       if (placement[1] === 'left') {
         if (element.a) {
           if (element.a['class']) {
-            element.a['class'] += ' align-left';
+            element.a['class'] += ' ' + alignLeft;
           } else {
-            element.a['class'] = 'align-left';
+            element.a['class'] = alignLeft;
           }
-          element._addCSSClass('align-left');
+          element._addCSSClass(alignLeft);
         } else {
-          element.addCSSClass('align-left');
+          element.addCSSClass(alignLeft);
         }
       }
       if (placement[1] === 'right') {
         if (element.a) {
           if (element.a['class']) {
-            element.a['class'] += ' align-right';
+            element.a['class'] += ' ' + alignRight;
           } else {
-            element.a['class'] = 'align-right';
+            element.a['class'] = alignRight;
           }
-          element._addCSSClass('align-right');
+          element._addCSSClass(alignRight);
         } else {
-          element.addCSSClass('align-right');
+          element.addCSSClass(alignRight);
         }
       }
       return target.parent().attach(element, insertIndex);
@@ -2713,7 +2744,7 @@
     };
 
     ResizableElement.prototype.resize = function(corner, x, y) {
-      if (!this.isMounted()) {
+      if (!(this.isMounted() && this.can('resize'))) {
         return;
       }
       return ContentEdit.Root.get().startResizing(this, corner, x, y, true);
@@ -2762,6 +2793,9 @@
     ResizableElement.prototype._onMouseMove = function(ev) {
       var corner;
       ResizableElement.__super__._onMouseMove.call(this);
+      if (!this.can('resize')) {
+        return;
+      }
       this._removeCSSClass('ce-element--resize-top-left');
       this._removeCSSClass('ce-element--resize-top-right');
       this._removeCSSClass('ce-element--resize-bottom-left');
@@ -2855,6 +2889,7 @@
         if (element) {
           this.attach(element);
         }
+        ContentEdit.Root.get().trigger('ready', this);
       }
     }
 
@@ -3205,7 +3240,7 @@
       if (this.isMounted()) {
         this._syncContent();
       }
-      if (this.content.isWhitespace()) {
+      if (this.content.isWhitespace() && this.can('remove')) {
         if (this.parent()) {
           this.parent().detach(this);
         }
@@ -3458,6 +3493,9 @@
         selection.select(this.domElement());
         return;
       }
+      if (!this.can('spawn')) {
+        return;
+      }
       this.content = tip.trim();
       this.updateInnerHTML();
       element = new this.constructor('p', {}, tail.trim());
@@ -3596,6 +3634,7 @@
         content.optimize();
         this._lastCached = Date.now();
         this._cached = content.html();
+        this._cached = this._cached.replace(/\u200B\Z/g, '');
       }
       return ("" + indent + "<" + this._tagName + (this._attributesToString()) + ">") + ("" + this._cached + "</" + this._tagName + ">");
     };
@@ -3603,7 +3642,7 @@
     PreText.prototype.updateInnerHTML = function() {
       var html;
       html = this.content.html();
-      html += '\n';
+      html += '\u200B';
       this._domElement.innerHTML = html;
       ContentSelect.Range.prepareElement(this._domElement);
       return this._flagIfEmpty();
@@ -3612,7 +3651,7 @@
     PreText.prototype._onKeyUp = function(ev) {
       var html, newSnaphot, snapshot;
       snapshot = this.content.html();
-      html = this._domElement.innerHTML.replace(/[\n]$/, '');
+      html = this._domElement.innerHTML;
       this.content = new HTMLString.String(html, this.content.preserveWhitespace());
       newSnaphot = this.content.html();
       if (snapshot !== newSnaphot) {
@@ -4000,6 +4039,7 @@
 
     function ListItem(attributes) {
       ListItem.__super__.constructor.call(this, 'li', attributes);
+      this._behaviours['indent'] = true;
     }
 
     ListItem.prototype.cssTypeName = function() {
@@ -4042,6 +4082,9 @@
 
     ListItem.prototype.indent = function() {
       var sibling;
+      if (!this.can('indent')) {
+        return;
+      }
       if (this.parent().children.indexOf(this) === 0) {
         return;
       }
@@ -4074,6 +4117,9 @@
 
     ListItem.prototype.unindent = function() {
       var child, grandParent, i, itemIndex, list, parent, parentIndex, selection, sibling, siblings, text, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1;
+      if (!this.can('indent')) {
+        return;
+      }
       parent = this.parent();
       grandParent = parent.parent();
       siblings = parent.children.slice(parent.children.indexOf(this) + 1, parent.children.length);
@@ -4221,13 +4267,20 @@
     };
 
     ListItemText.prototype.blur = function() {
-      if (this.content.isWhitespace()) {
+      if (this.content.isWhitespace() && this.can('remove')) {
         this.parent().remove();
       } else if (this.isMounted()) {
         this._domElement.blur();
         this._domElement.removeAttribute('contenteditable');
       }
       return ContentEdit.Element.prototype.blur.call(this);
+    };
+
+    ListItemText.prototype.can = function(behaviour, allowed) {
+      if (allowed) {
+        throw new Error('Cannot set behaviour for ListItemText');
+      }
+      return this.parent().can(behaviour);
     };
 
     ListItemText.prototype.html = function(indent) {
@@ -4294,6 +4347,9 @@
       ev.preventDefault();
       if (this.content.isWhitespace()) {
         this.parent().unindent();
+        return;
+      }
+      if (!this.can('spawn')) {
         return;
       }
       ContentSelect.Range.query(this._domElement);
@@ -4792,6 +4848,13 @@
       return ContentEdit.Element.prototype.blur.call(this);
     };
 
+    TableCellText.prototype.can = function(behaviour, allowed) {
+      if (allowed) {
+        throw new Error('Cannot set behaviour for ListItemText');
+      }
+      return this.parent().can(behaviour);
+    };
+
     TableCellText.prototype.html = function(indent) {
       var content;
       if (indent == null) {
@@ -4836,37 +4899,43 @@
       ev.preventDefault();
       cell = this.parent();
       row = cell.parent();
+      if (!(row.isEmpty() && row.can('remove'))) {
+        return;
+      }
       if (this.content.length() === 0 && row.children.indexOf(cell) === 0) {
-        if (row.isEmpty()) {
-          previous = this.previousContent();
-          if (previous) {
-            previous.focus();
-            selection = new ContentSelect.Range(previous.content.length(), previous.content.length());
-            selection.select(previous.domElement());
-          }
-          return row.parent().detach(row);
+        previous = this.previousContent();
+        if (previous) {
+          previous.focus();
+          selection = new ContentSelect.Range(previous.content.length(), previous.content.length());
+          selection.select(previous.domElement());
         }
+        return row.parent().detach(row);
       }
     };
 
     TableCellText.prototype._keyDelete = function(ev) {
       var lastChild, nextElement, row, selection;
       row = this.parent().parent();
-      if (row.isEmpty()) {
-        ev.preventDefault();
-        lastChild = row.children[row.children.length - 1];
-        nextElement = lastChild.tableCellText().nextContent();
-        if (nextElement) {
-          nextElement.focus();
-          selection = new ContentSelect.Range(0, 0);
-          selection.select(nextElement.domElement());
-        }
-        return row.parent().detach(row);
+      if (!(row.isEmpty() && row.can('remove'))) {
+        return;
       }
+      ev.preventDefault();
+      lastChild = row.children[row.children.length - 1];
+      nextElement = lastChild.tableCellText().nextContent();
+      if (nextElement) {
+        nextElement.focus();
+        selection = new ContentSelect.Range(0, 0);
+        selection.select(nextElement.domElement());
+      }
+      return row.parent().detach(row);
     };
 
     TableCellText.prototype._keyDown = function(ev) {
-      var cell, cellIndex, lastCell, next, nextRow, row;
+      var cell, cellIndex, lastCell, next, nextRow, row, selection;
+      selection = ContentSelect.Range.query(this._domElement);
+      if (!(this._atEnd(selection) && selection.isCollapsed())) {
+        return;
+      }
       ev.preventDefault();
       cell = this.parent();
       if (this._isInLastRow()) {
@@ -4908,6 +4977,9 @@
         }
         return this.previousContent().focus();
       } else {
+        if (!this.can('spawn')) {
+          return;
+        }
         grandParent = cell.parent().parent();
         if (grandParent.tagName() === 'tbody' && this._isLastInSection()) {
           row = new ContentEdit.TableRow();
@@ -4931,7 +5003,11 @@
     };
 
     TableCellText.prototype._keyUp = function(ev) {
-      var cell, cellIndex, previous, previousRow, row;
+      var cell, cellIndex, previous, previousRow, row, selection;
+      selection = ContentSelect.Range.query(this._domElement);
+      if (!(selection.get()[0] === 0 && selection.isCollapsed())) {
+        return;
+      }
       ev.preventDefault();
       cell = this.parent();
       if (this._isInFirstRow()) {
@@ -4965,13 +5041,14 @@
 }).call(this);
 (function() {
   var AttributeUI, CropMarksUI, StyleUI, _EditorApp,
-    __slice = [].slice,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __slice = [].slice;
 
   window.ContentTools = {
     Tools: {},
+    CANCEL_MESSAGE: 'Your changes have not been saved, do you really want to lose them?'.trim(),
     DEFAULT_TOOLS: [['bold', 'italic', 'link', 'align-left', 'align-center', 'align-right'], ['heading', 'subheading', 'paragraph', 'unordered-list', 'ordered-list', 'table', 'indent', 'unindent', 'line-break'], ['image', 'video', 'preformatted'], ['undo', 'redo', 'remove']],
     DEFAULT_VIDEO_HEIGHT: 300,
     DEFAULT_VIDEO_WIDTH: 400,
@@ -5075,6 +5152,7 @@
 
   ContentTools.ComponentUI = (function() {
     function ComponentUI() {
+      this._eventBinderDOM = document.createElement('div');
       this._bindings = {};
       this._parent = null;
       this._children = [];
@@ -5139,37 +5217,43 @@
         return;
       }
       this._removeDOMEventListeners();
-      this._domElement.parentNode.removeChild(this._domElement);
+      if (this._domElement.parentNode) {
+        this._domElement.parentNode.removeChild(this._domElement);
+      }
       return this._domElement = null;
     };
 
-    ComponentUI.prototype.bind = function(eventName, callback) {
+    ComponentUI.prototype.addEventListener = function(eventName, callback) {
       if (this._bindings[eventName] === void 0) {
         this._bindings[eventName] = [];
       }
       this._bindings[eventName].push(callback);
-      return callback;
     };
 
-    ComponentUI.prototype.trigger = function() {
-      var args, callback, eventName, _i, _len, _ref, _results;
-      eventName = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
-      if (!this._bindings[eventName]) {
-        return;
+    ComponentUI.prototype.createEvent = function(eventName, detail) {
+      return new ContentTools.Event(eventName, detail);
+    };
+
+    ComponentUI.prototype.dispatchEvent = function(ev) {
+      var callback, _i, _len, _ref;
+      if (!this._bindings[ev.name()]) {
+        return !ev.defaultPrevented();
       }
-      _ref = this._bindings[eventName];
-      _results = [];
+      _ref = this._bindings[ev.name()];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         callback = _ref[_i];
+        if (ev.propagationStopped()) {
+          break;
+        }
         if (!callback) {
           continue;
         }
-        _results.push(callback.call.apply(callback, [this].concat(__slice.call(args))));
+        callback.call(this, ev);
       }
-      return _results;
+      return !ev.defaultPrevented();
     };
 
-    ComponentUI.prototype.unbind = function(eventName, callback) {
+    ComponentUI.prototype.removeEventListener = function(eventName, callback) {
       var i, suspect, _i, _len, _ref, _results;
       if (!eventName) {
         this._bindings = {};
@@ -5299,6 +5383,47 @@
 
   })(ContentTools.ComponentUI);
 
+  ContentTools.Event = (function() {
+    function Event(name, detail) {
+      this._name = name;
+      this._detail = detail;
+      this._timeStamp = Date.now();
+      this._defaultPrevented = false;
+      this._propagationStopped = false;
+    }
+
+    Event.prototype.defaultPrevented = function() {
+      return this._defaultPrevented;
+    };
+
+    Event.prototype.detail = function() {
+      return this._detail;
+    };
+
+    Event.prototype.name = function() {
+      return this._name;
+    };
+
+    Event.prototype.propagationStopped = function() {
+      return this._propagationStopped;
+    };
+
+    Event.prototype.timeStamp = function() {
+      return this._timeStamp;
+    };
+
+    Event.prototype.preventDefault = function() {
+      return this._defaultPrevented = true;
+    };
+
+    Event.prototype.stopImmediatePropagation = function() {
+      return this._propagationStopped = true;
+    };
+
+    return Event;
+
+  })();
+
   ContentTools.FlashUI = (function(_super) {
     __extends(FlashUI, _super);
 
@@ -5336,31 +5461,41 @@
 
     function IgnitionUI() {
       IgnitionUI.__super__.constructor.call(this);
-      this._busy = false;
+      this._revertToState = 'ready';
+      this._state = 'ready';
     }
 
     IgnitionUI.prototype.busy = function(busy) {
-      if (busy === void 0) {
-        return this._busy;
-      }
-      if (this._busy === busy) {
-        return;
-      }
-      this._busy = busy;
-      if (busy) {
-        return this.addCSSClass('ct-ignition--busy');
-      } else {
-        return this.removeCSSClass('ct-ignition--busy');
+      if (this.dispatchEvent(this.createEvent('busy', {
+        busy: busy
+      }))) {
+        if (busy === (this._state === 'busy')) {
+          return;
+        }
+        if (busy) {
+          this._revertToState = this._state;
+          return this.state('busy');
+        } else {
+          return this.state(this._revertToState);
+        }
       }
     };
 
-    IgnitionUI.prototype.changeState = function(state) {
-      if (state === 'editing') {
-        this.addCSSClass('ct-ignition--editing');
-        return this.removeCSSClass('ct-ignition--ready');
-      } else if (state === 'ready') {
-        this.removeCSSClass('ct-ignition--editing');
-        return this.addCSSClass('ct-ignition--ready');
+    IgnitionUI.prototype.cancel = function() {
+      if (this.dispatchEvent(this.createEvent('cancel'))) {
+        return this.state('ready');
+      }
+    };
+
+    IgnitionUI.prototype.confirm = function() {
+      if (this.dispatchEvent(this.createEvent('confirm'))) {
+        return this.state('ready');
+      }
+    };
+
+    IgnitionUI.prototype.edit = function() {
+      if (this.dispatchEvent(this.createEvent('edit'))) {
+        return this.state('editing');
       }
     };
 
@@ -5379,6 +5514,31 @@
       return this._addDOMEventListeners();
     };
 
+    IgnitionUI.prototype.state = function(state) {
+      if (state === void 0) {
+        return this._state;
+      }
+      if (this._state === state) {
+        return;
+      }
+      if (!this.dispatchEvent(this.createEvent('statechange', {
+        state: state
+      }))) {
+        return;
+      }
+      this._state = state;
+      this.removeCSSClass('ct-ignition--busy');
+      this.removeCSSClass('ct-ignition--editing');
+      this.removeCSSClass('ct-ignition--ready');
+      if (this._state === 'busy') {
+        return this.addCSSClass('ct-ignition--busy');
+      } else if (this._state === 'editing') {
+        return this.addCSSClass('ct-ignition--editing');
+      } else if (this._state === 'ready') {
+        return this.addCSSClass('ct-ignition--ready');
+      }
+    };
+
     IgnitionUI.prototype.unmount = function() {
       IgnitionUI.__super__.unmount.call(this);
       this._domEdit = null;
@@ -5390,25 +5550,19 @@
       this._domEdit.addEventListener('click', (function(_this) {
         return function(ev) {
           ev.preventDefault();
-          _this.addCSSClass('ct-ignition--editing');
-          _this.removeCSSClass('ct-ignition--ready');
-          return _this.trigger('start');
+          return _this.edit();
         };
       })(this));
       this._domConfirm.addEventListener('click', (function(_this) {
         return function(ev) {
           ev.preventDefault();
-          _this.removeCSSClass('ct-ignition--editing');
-          _this.addCSSClass('ct-ignition--ready');
-          return _this.trigger('stop', true);
+          return _this.confirm();
         };
       })(this));
       return this._domCancel.addEventListener('click', (function(_this) {
         return function(ev) {
           ev.preventDefault();
-          _this.removeCSSClass('ct-ignition--editing');
-          _this.addCSSClass('ct-ignition--ready');
-          return _this.trigger('stop', false);
+          return _this.cancel();
         };
       })(this));
     };
@@ -5512,9 +5666,8 @@
       app = ContentTools.EditorApp.get();
       modal = new ContentTools.ModalUI();
       dialog = new ContentTools.PropertiesDialog(this.element);
-      dialog.bind('cancel', (function(_this) {
+      dialog.addEventListener('cancel', (function(_this) {
         return function() {
-          dialog.unbind('cancel');
           modal.hide();
           dialog.hide();
           if (_this.element.restoreState) {
@@ -5522,10 +5675,13 @@
           }
         };
       })(this));
-      dialog.bind('save', (function(_this) {
-        return function(attributes, styles, innerHTML) {
-          var applied, className, classNames, cssClass, element, name, value, _i, _j, _len, _len1, _ref, _ref1;
-          dialog.unbind('save');
+      dialog.addEventListener('save', (function(_this) {
+        return function(ev) {
+          var applied, attributes, className, classNames, cssClass, detail, element, innerHTML, name, styles, value, _i, _j, _len, _len1, _ref, _ref1;
+          detail = ev.detail();
+          attributes = detail.changedAttributes;
+          styles = detail.changedStyles;
+          innerHTML = detail.innerHTML;
           for (name in attributes) {
             value = attributes[name];
             if (name === 'class') {
@@ -5630,7 +5786,7 @@
     ModalUI.prototype._addDOMEventListeners = function() {
       return this._domElement.addEventListener('click', (function(_this) {
         return function(ev) {
-          return _this.trigger('click');
+          return _this.dispatchEvent(_this.createEvent('click'));
         };
       })(this));
     };
@@ -5663,17 +5819,8 @@
       return ToolboxUI.__super__.hide.call(this);
     };
 
-    ToolboxUI.prototype.tools = function(tools) {
-      if (tools === void 0) {
-        return this._tools;
-      }
-      this._tools = tools;
-      this.unmount();
-      return this.mount();
-    };
-
     ToolboxUI.prototype.mount = function() {
-      var coord, domToolGroup, i, position, restore, tool, toolGroup, toolName, _i, _j, _len, _len1, _ref;
+      var coord, position, restore;
       this._domElement = this.constructor.createDiv(['ct-widget', 'ct-toolbox']);
       this.parent().domElement().appendChild(this._domElement);
       this._domGrip = this.constructor.createDiv(['ct-toolbox__grip', 'ct-grip']);
@@ -5681,32 +5828,17 @@
       this._domGrip.appendChild(this.constructor.createDiv(['ct-grip__bump']));
       this._domGrip.appendChild(this.constructor.createDiv(['ct-grip__bump']));
       this._domGrip.appendChild(this.constructor.createDiv(['ct-grip__bump']));
-      _ref = this._tools;
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        toolGroup = _ref[i];
-        domToolGroup = this.constructor.createDiv(['ct-tool-group']);
-        this._domElement.appendChild(domToolGroup);
-        for (_j = 0, _len1 = toolGroup.length; _j < _len1; _j++) {
-          toolName = toolGroup[_j];
-          tool = ContentTools.ToolShelf.fetch(toolName);
-          this._toolUIs[toolName] = new ContentTools.ToolUI(tool);
-          this._toolUIs[toolName].mount(domToolGroup);
-          this._toolUIs[toolName].disabled(true);
-          this._toolUIs[toolName].bind('apply', (function(_this) {
-            return function() {
-              return _this.updateTools();
-            };
-          })(this));
-        }
-      }
+      this._domToolGroups = this.constructor.createDiv(['ct-tool-groups']);
+      this._domElement.appendChild(this._domToolGroups);
+      this.tools(this._tools);
       restore = window.localStorage.getItem('ct-toolbox-position');
       if (restore && /^\d+,\d+$/.test(restore)) {
         position = (function() {
-          var _k, _len2, _ref1, _results;
-          _ref1 = restore.split(',');
+          var _i, _len, _ref, _results;
+          _ref = restore.split(',');
           _results = [];
-          for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
-            coord = _ref1[_k];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            coord = _ref[_i];
             _results.push(parseInt(coord));
           }
           return _results;
@@ -5716,6 +5848,51 @@
         this._contain();
       }
       return this._addDOMEventListeners();
+    };
+
+    ToolboxUI.prototype.tools = function(tools) {
+      var domToolGroup, i, tool, toolGroup, toolName, toolUI, _i, _len, _ref, _ref1, _results;
+      if (tools === void 0) {
+        return this._tools;
+      }
+      this._tools = tools;
+      if (!this.isMounted()) {
+        return;
+      }
+      _ref = this._toolUIs;
+      for (toolName in _ref) {
+        toolUI = _ref[toolName];
+        toolUI.unmount();
+      }
+      this._toolUIs = {};
+      while (this._domToolGroups.lastChild) {
+        this._domToolGroups.removeChild(this._domToolGroups.lastChild);
+      }
+      _ref1 = this._tools;
+      _results = [];
+      for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
+        toolGroup = _ref1[i];
+        domToolGroup = this.constructor.createDiv(['ct-tool-group']);
+        this._domToolGroups.appendChild(domToolGroup);
+        _results.push((function() {
+          var _j, _len1, _results1;
+          _results1 = [];
+          for (_j = 0, _len1 = toolGroup.length; _j < _len1; _j++) {
+            toolName = toolGroup[_j];
+            tool = ContentTools.ToolShelf.fetch(toolName);
+            this._toolUIs[toolName] = new ContentTools.ToolUI(tool);
+            this._toolUIs[toolName].mount(domToolGroup);
+            this._toolUIs[toolName].disabled(true);
+            _results1.push(this._toolUIs[toolName].addEventListener('applied', (function(_this) {
+              return function() {
+                return _this.updateTools();
+              };
+            })(this)));
+          }
+          return _results1;
+        }).call(this));
+      }
+      return _results;
     };
 
     ToolboxUI.prototype.updateTools = function() {
@@ -5937,18 +6114,24 @@
     }
 
     ToolUI.prototype.apply = function(element, selection) {
-      var callback;
+      var callback, detail;
       if (!this.tool.canApply(element, selection)) {
         return;
       }
+      detail = {
+        'element': element,
+        'selection': selection
+      };
       callback = (function(_this) {
         return function(applied) {
           if (applied) {
-            return _this.trigger('apply');
+            return _this.dispatchEvent(_this.createEvent('applied', detail));
           }
         };
       })(this);
-      return this.tool.apply(element, selection, callback);
+      if (this.dispatchEvent(this.createEvent('apply', detail))) {
+        return this.tool.apply(element, selection, callback);
+      }
     };
 
     ToolUI.prototype.disabled = function(disabledState) {
@@ -6149,7 +6332,7 @@
             return;
           }
           if (ev.keyCode === 27) {
-            return _this.trigger('cancel');
+            return _this.dispatchEvent(_this.createEvent('cancel'));
           }
         };
       })(this);
@@ -6160,7 +6343,7 @@
           if (_this._busy) {
             return;
           }
-          return _this.trigger('cancel');
+          return _this.dispatchEvent(_this.createEvent('cancel'));
         };
       })(this));
     };
@@ -6256,7 +6439,7 @@
       this._domClear.textContent = ContentEdit._('Clear');
       domActions.appendChild(this._domClear);
       this._addDOMEventListeners();
-      return this.trigger('imageUploader.mount');
+      return this.dispatchEvent(this.createEvent('imageuploader.mount'));
     };
 
     ImageDialog.prototype.populate = function(imageURL, imageSize) {
@@ -6291,7 +6474,11 @@
     };
 
     ImageDialog.prototype.save = function(imageURL, imageSize, imageAttrs) {
-      return this.trigger('save', imageURL, imageSize, imageAttrs);
+      return this.dispatchEvent(this.createEvent('save', {
+        'imageURL': imageURL,
+        'imageSize': imageSize,
+        'imageAttrs': imageAttrs
+      }));
     };
 
     ImageDialog.prototype.state = function(state) {
@@ -6322,7 +6509,7 @@
       this._domRotateCCW = null;
       this._domRotateCW = null;
       this._domUpload = null;
-      return this.trigger('imageUploader.unmount');
+      return this.dispatchEvent(this.createEvent('imageuploader.unmount'));
     };
 
     ImageDialog.prototype._addDOMEventListeners = function() {
@@ -6336,30 +6523,32 @@
             ev.target.type = 'text';
             ev.target.type = 'file';
           }
-          return _this.trigger('imageUploader.fileReady', file);
+          return _this.dispatchEvent(_this.createEvent('imageuploader.fileready', {
+            file: file
+          }));
         };
       })(this));
       this._domCancelUpload.addEventListener('click', (function(_this) {
         return function(ev) {
-          return _this.trigger('imageUploader.cancelUpload');
+          return _this.dispatchEvent(_this.createEvent('imageuploader.cancelupload'));
         };
       })(this));
       this._domClear.addEventListener('click', (function(_this) {
         return function(ev) {
           _this.removeCropMarks();
-          return _this.trigger('imageUploader.clear');
+          return _this.dispatchEvent(_this.createEvent('imageuploader.clear'));
         };
       })(this));
       this._domRotateCCW.addEventListener('click', (function(_this) {
         return function(ev) {
           _this.removeCropMarks();
-          return _this.trigger('imageUploader.rotateCCW');
+          return _this.dispatchEvent(_this.createEvent('imageuploader.rotateccw'));
         };
       })(this));
       this._domRotateCW.addEventListener('click', (function(_this) {
         return function(ev) {
           _this.removeCropMarks();
-          return _this.trigger('imageUploader.rotateCW');
+          return _this.dispatchEvent(_this.createEvent('imageuploader.rotatecw'));
         };
       })(this));
       this._domCrop.addEventListener('click', (function(_this) {
@@ -6373,7 +6562,7 @@
       })(this));
       return this._domInsert.addEventListener('click', (function(_this) {
         return function(ev) {
-          return _this.trigger('imageUploader.save');
+          return _this.dispatchEvent(_this.createEvent('imageuploader.save'));
         };
       })(this));
     };
@@ -6561,16 +6750,16 @@
     };
 
     LinkDialog.prototype.save = function() {
-      var linkAttr;
-      if (!this.isMounted) {
-        return this.trigger('save', '');
+      var detail;
+      if (!this.isMounted()) {
+        this.dispatchEvent(this.createEvent('save'));
+        return;
       }
-      linkAttr = {};
-      linkAttr.href = this._domInput.value.trim();
-      if (this._target) {
-        linkAttr.target = this._target;
-      }
-      return this.trigger('save', linkAttr);
+      detail = {
+        href: this._domInput.value.trim(),
+        target: this._target ? this._target : void 0
+      };
+      return this.dispatchEvent(this.createEvent('save', detail));
     };
 
     LinkDialog.prototype.show = function() {
@@ -6779,12 +6968,17 @@
     };
 
     PropertiesDialog.prototype.save = function() {
-      var innerHTML;
+      var detail, innerHTML;
       innerHTML = null;
       if (this._supportsCoding) {
         innerHTML = this._domInnerHTML.value;
       }
-      return this.trigger('save', this.changedAttributes(), this.changedStyles(), innerHTML);
+      detail = {
+        changedAttributes: this.changedAttributes(),
+        changedStyles: this.changedStyles(),
+        innerHTML: innerHTML
+      };
+      return this.dispatchEvent(this.createEvent('save', detail));
     };
 
     PropertiesDialog.prototype._addAttributeUI = function(name, value) {
@@ -6792,7 +6986,7 @@
       dialog = this;
       attributeUI = new AttributeUI(name, value);
       this._attributeUIs.push(attributeUI);
-      attributeUI.bind('blur', function() {
+      attributeUI.addEventListener('blur', function(ev) {
         var index, lastAttributeUI, length;
         dialog._focusedAttributeUI = null;
         ContentEdit.addCSSClass(dialog._domRemoveAttribute, 'ct-control--muted');
@@ -6809,11 +7003,11 @@
           }
         }
       });
-      attributeUI.bind('focus', function() {
+      attributeUI.addEventListener('focus', function(ev) {
         dialog._focusedAttributeUI = this;
         return ContentEdit.removeCSSClass(dialog._domRemoveAttribute, 'ct-control--muted');
       });
-      attributeUI.bind('namechange', function() {
+      attributeUI.addEventListener('namechange', function(ev) {
         var element, otherAttributeUI, restricted, valid, _i, _len, _ref;
         element = dialog.element;
         name = this.name().toLowerCase();
@@ -6879,11 +7073,13 @@
           return selectTab('attributes');
         };
       })(this));
-      this._domCodeTab.addEventListener('mousedown', (function(_this) {
-        return function() {
-          return selectTab('code');
-        };
-      })(this));
+      if (this._supportsCoding) {
+        this._domCodeTab.addEventListener('mousedown', (function(_this) {
+          return function() {
+            return selectTab('code');
+          };
+        })(this));
+      }
       this._domRemoveAttribute.addEventListener('mousedown', (function(_this) {
         return function(ev) {
           var index, last;
@@ -7042,7 +7238,7 @@
           var name, nextDomAttribute, nextNameDom;
           name = _this.name();
           nextDomAttribute = _this._domElement.nextSibling;
-          _this.trigger('blur');
+          _this.dispatchEvent(_this.createEvent('blur'));
           if (name === '' && nextDomAttribute) {
             nextNameDom = nextDomAttribute.querySelector('.ct-attribute__name');
             return nextNameDom.focus();
@@ -7051,12 +7247,12 @@
       })(this));
       this._domName.addEventListener('focus', (function(_this) {
         return function() {
-          return _this.trigger('focus');
+          return _this.dispatchEvent(_this.createEvent('focus'));
         };
       })(this));
       this._domName.addEventListener('input', (function(_this) {
         return function() {
-          return _this.trigger('namechange');
+          return _this.dispatchEvent(_this.createEvent('namechange'));
         };
       })(this));
       this._domName.addEventListener('keydown', (function(_this) {
@@ -7068,12 +7264,12 @@
       })(this));
       this._domValue.addEventListener('blur', (function(_this) {
         return function() {
-          return _this.trigger('blur');
+          return _this.dispatchEvent(_this.createEvent('blur'));
         };
       })(this));
       this._domValue.addEventListener('focus', (function(_this) {
         return function() {
-          return _this.trigger('focus');
+          return _this.dispatchEvent(_this.createEvent('focus'));
         };
       })(this));
       return this._domValue.addEventListener('keydown', (function(_this) {
@@ -7172,15 +7368,15 @@
     };
 
     TableDialog.prototype.save = function() {
-      var footCSSClass, headCSSClass, tableCfg;
+      var detail, footCSSClass, headCSSClass;
       footCSSClass = this._domFootSection.getAttribute('class');
       headCSSClass = this._domHeadSection.getAttribute('class');
-      tableCfg = {
+      detail = {
         columns: parseInt(this._domBodyInput.value),
         foot: footCSSClass.indexOf('ct-section--applied') > -1,
         head: headCSSClass.indexOf('ct-section--applied') > -1
       };
-      return this.trigger('save', tableCfg);
+      return this.dispatchEvent(this.createEvent('save', detail));
     };
 
     TableDialog.prototype.unmount = function() {
@@ -7289,9 +7485,13 @@
       videoURL = this._domInput.value.trim();
       embedURL = ContentTools.getEmbedVideoURL(videoURL);
       if (embedURL) {
-        return this.trigger('save', embedURL);
+        return this.dispatchEvent(this.createEvent('save', {
+          'url': embedURL
+        }));
       } else {
-        return this.trigger('save', videoURL);
+        return this.dispatchEvent(this.createEvent('save', {
+          'url': videoURL
+        }));
       }
     };
 
@@ -7365,7 +7565,7 @@
     function _EditorApp() {
       _EditorApp.__super__.constructor.call(this);
       this.history = null;
-      this._state = ContentTools.EditorApp.DORMANT;
+      this._state = 'dormant';
       this._regions = null;
       this._orderedRegions = null;
       this._rootLastModified = null;
@@ -7381,6 +7581,30 @@
 
     _EditorApp.prototype.domRegions = function() {
       return this._domRegions;
+    };
+
+    _EditorApp.prototype.getState = function() {
+      return this._state;
+    };
+
+    _EditorApp.prototype.ignition = function() {
+      return this._ignition;
+    };
+
+    _EditorApp.prototype.inspector = function() {
+      return this._inspector;
+    };
+
+    _EditorApp.prototype.isDormant = function() {
+      return this._state === 'dormant';
+    };
+
+    _EditorApp.prototype.isReady = function() {
+      return this._state === 'ready';
+    };
+
+    _EditorApp.prototype.isEditing = function() {
+      return this._state === 'editing';
     };
 
     _EditorApp.prototype.orderedRegions = function() {
@@ -7405,20 +7629,8 @@
       return this._shiftDown;
     };
 
-    _EditorApp.prototype.getState = function() {
-      return this._state;
-    };
-
-    _EditorApp.prototype.isDormant = function() {
-      return this._state === ContentTools.EditorApp.DORMANT;
-    };
-
-    _EditorApp.prototype.isReady = function() {
-      return this._state === ContentTools.EditorApp.READY;
-    };
-
-    _EditorApp.prototype.isEditing = function() {
-      return this._state === ContentTools.EditorApp.EDITING;
+    _EditorApp.prototype.toolbox = function() {
+      return this._toolbox;
     };
 
     _EditorApp.prototype.busy = function(busy) {
@@ -7441,37 +7653,39 @@
       this.mount();
       this._ignition = new ContentTools.IgnitionUI();
       this.attach(this._ignition);
-      this._ignition.bind('start', (function(_this) {
-        return function() {
-          return _this.start();
-        };
-      })(this));
-      this._ignition.bind('stop', (function(_this) {
-        return function(save) {
-          var focused;
-          focused = ContentEdit.Root.get().focused();
-          if (focused && focused.isMounted() && focused._syncContent !== void 0) {
-            focused._syncContent();
-          }
-          if (save) {
-            _this.save();
-          } else {
-            if (!_this.revert()) {
-              _this._ignition.changeState('editing');
-              return;
-            }
-          }
-          return _this.stop();
-        };
-      })(this));
       if (this._domRegions.length) {
         this._ignition.show();
+        this._ignition.addEventListener('edit', (function(_this) {
+          return function(ev) {
+            ev.preventDefault();
+            _this.start();
+            return _this._ignition.state('editing');
+          };
+        })(this));
+        this._ignition.addEventListener('confirm', (function(_this) {
+          return function(ev) {
+            ev.preventDefault();
+            _this._ignition.state('ready');
+            return _this.stop(true);
+          };
+        })(this));
+        this._ignition.addEventListener('cancel', (function(_this) {
+          return function(ev) {
+            ev.preventDefault();
+            _this.stop(false);
+            if (_this.isEditing()) {
+              return _this._ignition.state('editing');
+            } else {
+              return _this._ignition.state('ready');
+            }
+          };
+        })(this));
       }
       this._toolbox = new ContentTools.ToolboxUI(ContentTools.DEFAULT_TOOLS);
       this.attach(this._toolbox);
       this._inspector = new ContentTools.InspectorUI();
       this.attach(this._inspector);
-      this._state = ContentTools.EditorApp.READY;
+      this._state = 'ready';
       ContentEdit.Root.get().bind('detach', (function(_this) {
         return function(element) {
           return _this._preventEmptyRegions();
@@ -7648,6 +7862,9 @@
 
     _EditorApp.prototype.revert = function() {
       var confirmMessage;
+      if (!this.dispatchEvent(this.createEvent('revert'))) {
+        return;
+      }
       confirmMessage = ContentEdit._('Your changes have not been saved, do you really want to lose them?');
       if (ContentEdit.Root.get().lastModified() > this._rootLastModified && !window.confirm(confirmMessage)) {
         return false;
@@ -7686,11 +7903,19 @@
       }
     };
 
-    _EditorApp.prototype.save = function() {
-      var args, child, html, modifiedRegions, name, passive, region, root, _ref;
-      passive = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+    _EditorApp.prototype.save = function(passive) {
+      var child, html, modifiedRegions, name, region, root, _ref;
+      if (!this.dispatchEvent(this.createEvent('save', {
+        passive: passive
+      }))) {
+        return;
+      }
       root = ContentEdit.Root.get();
       if (root.lastModified() === this._rootLastModified && passive) {
+        this.dispatchEvent(this.createEvent('saved', {
+          regions: {},
+          passive: passive
+        }));
         return;
       }
       modifiedRegions = {};
@@ -7713,7 +7938,10 @@
         modifiedRegions[name] = html;
         this._regionsLastModified[name] = region.lastModified();
       }
-      return this.trigger.apply(this, ['save', modifiedRegions].concat(__slice.call(args)));
+      return this.dispatchEvent(this.createEvent('saved', {
+        regions: modifiedRegions,
+        passive: passive
+      }));
     };
 
     _EditorApp.prototype.setRegionOrder = function(regionNames) {
@@ -7722,6 +7950,9 @@
 
     _EditorApp.prototype.start = function() {
       var domRegion, i, name, _i, _len, _ref;
+      if (!this.dispatchEvent(this.createEvent('start'))) {
+        return;
+      }
       this.busy(true);
       this._regions = {};
       this._orderedRegions = [];
@@ -7740,13 +7971,30 @@
       this._rootLastModified = ContentEdit.Root.get().lastModified();
       this.history = new ContentTools.History(this._regions);
       this.history.watch();
-      this._state = ContentTools.EditorApp.EDITING;
+      this._state = 'editing';
       this._toolbox.show();
       this._inspector.show();
       return this.busy(false);
     };
 
-    _EditorApp.prototype.stop = function() {
+    _EditorApp.prototype.stop = function(save) {
+      var focused;
+      if (!this.dispatchEvent(this.createEvent('stop', {
+        save: save
+      }))) {
+        return;
+      }
+      focused = ContentEdit.Root.get().focused();
+      if (focused && focused.isMounted() && focused._syncContent !== void 0) {
+        focused._syncContent();
+      }
+      if (save) {
+        this.save();
+      } else {
+        if (!this.revert()) {
+          return;
+        }
+      }
       if (ContentEdit.Root.get().focused()) {
         ContentEdit.Root.get().focused().blur();
       }
@@ -7755,7 +8003,7 @@
       this._toolbox.hide();
       this._inspector.hide();
       this._regions = {};
-      return this._state = ContentTools.EditorApp.READY;
+      this._state = 'ready';
     };
 
     _EditorApp.prototype._addDOMEventListeners = function() {
@@ -7798,8 +8046,8 @@
       document.addEventListener('keyup', this._handleHighlightOff);
       window.onbeforeunload = (function(_this) {
         return function(ev) {
-          if (_this._state === ContentTools.EditorApp.EDITING) {
-            return ContentEdit._('Your changes have not been saved, do you really want to lose them?');
+          if (_this._state === 'editing') {
+            return ContentEdit._(ContentTools.CANCEL_MESSAGE);
           }
         };
       })(this);
@@ -7811,11 +8059,12 @@
     };
 
     _EditorApp.prototype._preventEmptyRegions = function() {
-      var child, hasEditableChildren, name, placeholder, region, _i, _len, _ref, _ref1, _results;
+      var child, hasEditableChildren, lastModified, name, placeholder, region, _i, _len, _ref, _ref1, _results;
       _ref = this._regions;
       _results = [];
       for (name in _ref) {
         region = _ref[name];
+        lastModified = region.lastModified();
         hasEditableChildren = false;
         _ref1 = region.children;
         for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
@@ -7830,7 +8079,7 @@
         }
         placeholder = new ContentEdit.Text('p', {}, '');
         region.attach(placeholder);
-        _results.push(region.commit());
+        _results.push(region._modified = lastModified);
       }
       return _results;
     };
@@ -7848,12 +8097,6 @@
     var instance;
 
     function EditorApp() {}
-
-    EditorApp.DORMANT = 'dormant';
-
-    EditorApp.READY = 'ready';
-
-    EditorApp.EDITING = 'editing';
 
     instance = null;
 
@@ -8305,7 +8548,7 @@
       }
       app = ContentTools.EditorApp.get();
       modal = new ContentTools.ModalUI(transparent = true, allowScrolling = true);
-      modal.bind('click', function() {
+      modal.addEventListener('click', function() {
         this.unmount();
         dialog.hide();
         if (element.content) {
@@ -8317,16 +8560,16 @@
       });
       dialog = new ContentTools.LinkDialog(this.getAttr('href', element, selection), this.getAttr('target', element, selection));
       dialog.position([rect.left + (rect.width / 2) + window.scrollX, rect.top + (rect.height / 2) + window.scrollY]);
-      dialog.bind('save', function(linkAttr) {
-        var a, alignmentClassNames, className, linkClasses, _i, _j, _len, _len1;
-        dialog.unbind('save');
+      dialog.addEventListener('save', function(ev) {
+        var a, alignmentClassNames, className, detail, linkClasses, _i, _j, _len, _len1;
+        detail = ev.detail();
         applied = true;
         if (element.type() === 'Image') {
           alignmentClassNames = ['align-center', 'align-left', 'align-right'];
-          if (linkAttr.href) {
+          if (detail.href) {
             element.a = {
-              href: linkAttr.href,
-              target: linkAttr.target ? linkAttr.target : '',
+              href: detail.href,
+              target: detail.target ? detail.target : '',
               "class": element.a ? element.a['class'] : ''
             };
             for (_i = 0, _len = alignmentClassNames.length; _i < _len; _i++) {
@@ -8355,15 +8598,15 @@
           element.mount();
         } else {
           element.content = element.content.unformat(from, to, 'a');
-          if (linkAttr.href) {
-            a = new HTMLString.Tag('a', linkAttr);
+          if (detail.href) {
+            a = new HTMLString.Tag('a', detail);
             element.content = element.content.format(from, to, a);
             element.content.optimize();
           }
           element.updateInnerHTML();
         }
         element.taint();
-        return modal.trigger('click');
+        return modal.dispatchEvent(modal.createEvent('click'));
       });
       app.attach(modal);
       app.attach(dialog);
@@ -8562,13 +8805,13 @@
     };
 
     AlignLeft.apply = function(element, selection, callback) {
-      var className, _i, _len, _ref, _ref1;
+      var alignmentClassNames, className, _i, _len, _ref;
       if ((_ref = element.type()) === 'ListItemText' || _ref === 'TableCellText') {
         element = element.parent();
       }
-      _ref1 = ['text-center', 'text-left', 'text-right'];
-      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-        className = _ref1[_i];
+      alignmentClassNames = [ContentTools.Tools.AlignLeft.className, ContentTools.Tools.AlignCenter.className, ContentTools.Tools.AlignRight.className];
+      for (_i = 0, _len = alignmentClassNames.length; _i < _len; _i++) {
+        className = alignmentClassNames[_i];
         if (element.hasCSSClass(className)) {
           element.removeCSSClass(className);
           if (className === this.className) {
@@ -8718,9 +8961,8 @@
         return node && node.type() === 'Table';
       });
       dialog = new ContentTools.TableDialog(table);
-      dialog.bind('cancel', (function(_this) {
+      dialog.addEventListener('cancel', (function(_this) {
         return function() {
-          dialog.unbind('cancel');
           modal.hide();
           dialog.hide();
           if (element.restoreState) {
@@ -8729,10 +8971,10 @@
           return callback(false);
         };
       })(this));
-      dialog.bind('save', (function(_this) {
-        return function(tableCfg) {
-          var index, keepFocus, node, _ref;
-          dialog.unbind('save');
+      dialog.addEventListener('save', (function(_this) {
+        return function(ev) {
+          var index, keepFocus, node, tableCfg, _ref;
+          tableCfg = ev.detail();
           keepFocus = true;
           if (table) {
             _this._updateTable(tableCfg, table);
@@ -8971,9 +9213,8 @@
       app = ContentTools.EditorApp.get();
       modal = new ContentTools.ModalUI();
       dialog = new ContentTools.ImageDialog();
-      dialog.bind('cancel', (function(_this) {
+      dialog.addEventListener('cancel', (function(_this) {
         return function() {
-          dialog.unbind('cancel');
           modal.hide();
           dialog.hide();
           if (element.restoreState) {
@@ -8982,10 +9223,13 @@
           return callback(false);
         };
       })(this));
-      dialog.bind('save', (function(_this) {
-        return function(imageURL, imageSize, imageAttrs) {
-          var image, index, node, _ref;
-          dialog.unbind('save');
+      dialog.addEventListener('save', (function(_this) {
+        return function(ev) {
+          var detail, image, imageAttrs, imageSize, imageURL, index, node, _ref;
+          detail = ev.detail();
+          imageURL = detail.imageURL;
+          imageSize = detail.imageSize;
+          imageAttrs = detail.imageAttrs;
           if (!imageAttrs) {
             imageAttrs = {};
           }
@@ -9036,9 +9280,8 @@
       app = ContentTools.EditorApp.get();
       modal = new ContentTools.ModalUI();
       dialog = new ContentTools.VideoDialog();
-      dialog.bind('cancel', (function(_this) {
+      dialog.addEventListener('cancel', (function(_this) {
         return function() {
-          dialog.unbind('cancel');
           modal.hide();
           dialog.hide();
           if (element.restoreState) {
@@ -9047,15 +9290,15 @@
           return callback(false);
         };
       })(this));
-      dialog.bind('save', (function(_this) {
-        return function(videoURL) {
-          var index, node, video, _ref;
-          dialog.unbind('save');
-          if (videoURL) {
+      dialog.addEventListener('save', (function(_this) {
+        return function(ev) {
+          var index, node, url, video, _ref;
+          url = ev.detail().url;
+          if (url) {
             video = new ContentEdit.Video('iframe', {
               'frameborder': 0,
               'height': ContentTools.DEFAULT_VIDEO_HEIGHT,
-              'src': videoURL,
+              'src': url,
               'width': ContentTools.DEFAULT_VIDEO_WIDTH
             });
             _ref = _this._insertAt(element), node = _ref[0], index = _ref[1];
@@ -9068,7 +9311,7 @@
           }
           modal.hide();
           dialog.hide();
-          return callback(videoURL !== '');
+          return callback(url !== '');
         };
       })(this));
       app.attach(modal);
