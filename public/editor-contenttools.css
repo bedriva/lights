@@ -2,26 +2,6 @@ body .ct-widget.ct-ignition {
   left: auto;
   right: calc(16px + 48px + 16px + 48px);
 }
-.ce-element {
-  background-color: rgba(243, 156, 18, 0.05);
-  position: relative;
-}
-[data-shared] .ce-element:after {
-  position: absolute;
-  left: -50px;
-  top: 2px;
-  font-size: 10px;
-  text-transform: uppercase;
-  border-radius: 2px;
-  box-shadow: 0px 1px 1px 1px rgba(0, 0, 0, 0.2);
-  background-color: white;
-  content: " Shared";
-  padding: 2px 3px;
-  z-index: 10000000000000;
-}
-[data-shared] .ce-element .ce-element:after {
-  display: none;
-}
 
 [data-name="slug"],
 [data-name="order"] {
@@ -121,6 +101,12 @@ input {
   z-index: 1000000;
 }
 
-[contenteditable="true"] {
-  outline: 2px solid #f39c12;
+[contenteditable="true"],
+.ce-element {
+  box-shadow: 0 0 3px 3px #ffc146;
+}
+
+[data-shared][contenteditable="true"],
+[data-shared] .ce-element {
+  box-shadow: 0 0 3px 3px #ff46bb;
 }
