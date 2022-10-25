@@ -42,6 +42,9 @@ function get_page_by_slug($slug)
 
 function strip_and_trim($content)
 {
+  if (empty($content)) {
+    return '';
+  }
   return trim(strip_tags(trim($content)));
 }
 
@@ -68,6 +71,7 @@ function get_pages()
       $file = LIGHTS_PATH_DATA . '/pages/' . $page;
       $page = json_decode_file($file);
       $page->stripped_title = strip_and_trim($page->page_title);
+      $page->order = empty($page->order) ? 0 : $page->order;
       if (!empty($page->stripped_title)) {
         $newPages[] = $page;
       }

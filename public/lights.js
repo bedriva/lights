@@ -134,7 +134,11 @@ var LIGHTS = {
       }
 
       if (slug) {
-        var editor = ContentTools.EditorApp.get();
+        var editor = null;
+        if (EDITOR === "contenttools") {
+          editor = ContentTools.EditorApp.get();
+        }
+
         var payload = new FormData();
         payload.append("page_title", "<p>" + title + "</p>");
         payload.append("slug", slug);

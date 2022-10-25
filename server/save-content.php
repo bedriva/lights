@@ -2,16 +2,26 @@
 
 if (is_loggedin()) {
 
-  $current_filename = slugify($_POST['current_slug']);
-  $filename = slugify($_POST['slug']);
+  $current_filename = slugify(@$_POST['current_slug']);
+  $filename = slugify(@$_POST['slug']);
 
   if (empty($filename)) {
     $filename = $current_filename;
   }
 
+  if (empty($filename)) {
+    $filename = time();
+  }
+
   $file = LIGHTS_PATH_DATA . '/pages/' . $current_filename . '.json';
-  $content = file_get_contents($file);
-  $page = json_decode($content);
+  if (file_exists($file)) {
+    $content = file_get_contents($file);
+    $page = json_decode($content);
+  } else {
+    $page = (object)[
+      'order' => 0,
+    ];
+  }
 
   foreach ($_POST as $prop => $val) {
     if (stristr($prop, 'shared_')) {
