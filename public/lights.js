@@ -154,7 +154,7 @@ var LIGHTS = {
     var linkLogout = document.createElement("div");
     linkLogout.innerHTML = "Log out";
     linkLogout.addEventListener("click", function () {
-      window.location.href = "logout";
+      window.location.href = "/logout";
     });
 
     linkLogout.className = "logout-button";

@@ -1,6 +1,5 @@
 <?php
-require_once 'functions.php';
 
-logout();
+$logout = true;
 
-header('Location: index');
+require_once 'index.php';

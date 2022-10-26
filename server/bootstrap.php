@@ -27,4 +27,9 @@ if (isset($admin_ajax)) {
   exit;
 }
 
+if (isset($logout)) {
+  require LIGHTS_PATH_SERVER . '/do-logout.php';
+  exit;
+}
+
 require_once 'load-data.php';

@@ -1,7 +1,7 @@
 <?php
 
 if (!empty($_POST)) {
-  require_once 'login.php';
+  require_once 'do-login.php';
 }
 
 $page = new stdClass;

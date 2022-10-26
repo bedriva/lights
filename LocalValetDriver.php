@@ -59,6 +59,10 @@ class LocalValetDriver extends ValetDriver
         if (empty($uri) || $uri === '/') {
             return $sitePath . '/server/index.php';
         } else {
+            if (str_starts_with($uri, '/logout')) {
+                return $sitePath . '/server/logout.php';
+            }
+
             if (str_starts_with($uri, '/public/')) {
                 return $sitePath . '/server/public.php';
             }
